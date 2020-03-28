@@ -70,7 +70,7 @@ static char *__re_get_first_match(const char *pattern, const char *subject)
  * @retval 0 The file was parsed correctly.
  * @retval 1 The file could not be parsed.
  */
-static int __parse_custom_format(Game *game, FILE * board)
+static int __parse_custom_format(Game *game, FILE *board)
 {
   char boardline_re[20];
   char *endptr;
@@ -82,30 +82,38 @@ static int __parse_custom_format(Game *game, FILE * board)
   /* First line - "Rows:NNN" */
   fgets(header_line, 16, board);
   s = __re_get_first_match("^Rows: *(\\d{1,10})$", header_line);
-  if (!s) {
+  if (!s)
+  {
     free(s);
     return 1;
   }
-  game->rows = (size_t) strtol(s, &endptr, 10);
-  if (*endptr != '\0') {
+  game->rows = (size_t)strtol(s, &endptr, 10);
+  if (*endptr != '\0')
+  {
     free(s);
     return 1;
-  } else {
+  }
+  else
+  {
     free(s);
   }
 
   /* Second line - "Cols:NNN" */
   fgets(header_line, 16, board);
   s = __re_get_first_match("^Cols: *(\\d{1,10})$", header_line);
-  if (!s) {
+  if (!s)
+  {
     free(s);
     return 1;
   }
-  game->cols = (size_t) strtol(s, &endptr, 10);
-  if (*endptr != '\0') {
+  game->cols = (size_t)strtol(s, &endptr, 10);
+  if (*endptr != '\0')
+  {
     free(s);
     return 1;
-  } else {
+  }
+  else
+  {
     free(s);
   }
 
@@ -117,17 +125,20 @@ static int __parse_custom_format(Game *game, FILE * board)
   /* Read game->rows lines describing the board */
   sprintf(boardline_re, "^([#.]{%zu})$", game->cols);
   line = MEM_ALLOC_N(char, game->cols + 2);
-  for (i = 0; i < game->rows; i++) {
+  for (i = 0; i < game->rows; i++)
+  {
     fgets(line, game->cols + 2, board);
 
     s = __re_get_first_match(boardline_re, line);
-    if (!s) {
+    if (!s)
+    {
       free(line);
       free(s);
       return 1;
     }
 
-    for (j = 0; j < game->cols; j++) {
+    for (j = 0; j < game->cols; j++)
+    {
       if (s[j] == '#')
         game_set_alive(game, i, j);
       else
@@ -149,49 +160,65 @@ static int __parse_custom_format(Game *game, FILE * board)
  */
 void process_slice(GameInfo *tinfo)
 {
-  char live_count;
-  size_t row, col;
 
-  int N = 4; //numb threads
-
-  //int tot_c = tinfo->game->cols;
-  int tot_r = tinfo->game->rows;
-  //int odd_c = 0;
-  int odd_r = 0;
-  int numb = (tot_r / N);
-
-  if(numb%2 != 0){
-      odd_r =1;
-  }
-  
-  #pragma omp parallel num_threads(4)
+#pragma omp parallel
   {
-    int ID = omp_get_thread_num();
-    int start = ID + numb;
-    int end = start + numb;
+    char live_count;
+    size_t row, col;
+
+    int N = omp_get_num_threads(); //numb threads
+
+    int tot_rows = tinfo->game->rows;
     
-    if(odd_r == 1 && ID == N-1){
+    int odd_r = 0;
+    int numb = (tot_rows / N);
+
+    if (numb % 2 != 0)
+    {
+        odd_r = 1;
+    }
+
+    int ID = omp_get_thread_num();
+    int start = ID * numb;
+    int end = start + numb;
+
+    if (odd_r == 1 && ID == N - 1)
+    {
       end = tinfo->game->rows;
     }
 
-    for (col = 0; col < tinfo->game->cols; col++) {
-      for (row = start ; row < end; row++) {
-        live_count = 0;
+    printf("%d\n", N);
+    printf("Thread: %d| start:%d | end:%d\n", ID, start, end);
 
+    for (row = start; row < end; row++)
+    {
+      for (col = 0; col < tinfo->game->cols; col++)
+      {
+        live_count = 0;
         /* Count the living neighbour cells */
-        if (game_is_alive(tinfo->game, row, col+1))   live_count++;
-        if (game_is_alive(tinfo->game, row+1, col))   live_count++;
-        if (game_is_alive(tinfo->game, row+1, col+1)) live_count++;
-        if (row > 0) {
-          if (game_is_alive(tinfo->game, row-1, col))   live_count++;
-          if (game_is_alive(tinfo->game, row-1, col+1)) live_count++;
+        if (game_is_alive(tinfo->game, row, col + 1))
+          live_count++;
+        if (game_is_alive(tinfo->game, row + 1, col))
+          live_count++;
+        if (game_is_alive(tinfo->game, row + 1, col + 1))
+          live_count++;
+        if (row > 0)
+        {
+          if (game_is_alive(tinfo->game, row - 1, col))
+            live_count++;
+          if (game_is_alive(tinfo->game, row - 1, col + 1))
+            live_count++;
         }
-        if (col > 0) {
-          if (game_is_alive(tinfo->game, row, col-1))   live_count++;
-          if (game_is_alive(tinfo->game, row+1, col-1)) live_count++;
+        if (col > 0)
+        {
+          if (game_is_alive(tinfo->game, row, col - 1))
+            live_count++;
+          if (game_is_alive(tinfo->game, row + 1, col - 1))
+            live_count++;
         }
         if ((row > 0) && (col > 0))
-          if (game_is_alive(tinfo->game, row-1, col-1)) live_count++;
+          if (game_is_alive(tinfo->game, row - 1, col - 1))
+            live_count++;
 
         /* Apply the game's rules to the current cell */
         if ((live_count < 2) || (live_count > 3))
@@ -205,15 +232,10 @@ void process_slice(GameInfo *tinfo)
   }
 }
 
-/*
-Qualquer célula viva com menos de dois vizinhos vivos morre de solidão.
-Qualquer célula viva com mais de três vizinhos vivos morre de superpopulação.
-Qualquer célula morta com exatamente três vizinhos vivos se torna uma célula viva.
-Qualquer célula viva com dois ou três vizinhos vivos continua no mesmo estado para a próxima geração.
-*/
 void game_free(Game *game)
 {
-  if (game) {
+  if (game)
+  {
     if (game->board)
       free(game->board);
     free(game);
@@ -276,8 +298,10 @@ void game_print_board(Game *game)
   assert(game);
   assert(game->board);
 
-  for (row = 0; row < game->rows; row++) {
-    for (col = 0; col < game->cols; col++) {
+  for (row = 0; row < game->rows; row++)
+  {
+    for (col = 0; col < game->cols; col++)
+    {
       printf("%c", game_is_alive(game, row, col) ? '#' : '.');
     }
     printf("\n");
@@ -311,13 +335,12 @@ int game_tick(Game *game)
   GameInfo *tinfo;
   size_t tnum = 0;
 
-
   new_board = MEM_ALLOC_N(char, game->rows * game->cols);
   tinfo = MEM_ALLOC(GameInfo);
   tinfo->game = game;
   tinfo->new_board = new_board;
 
-  process_slice (&tinfo[tnum]);
+  process_slice(&tinfo[tnum]);
 
   /* Make game use the new board and drop the old one */
   free(game->board);
