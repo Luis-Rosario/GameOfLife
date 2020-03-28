@@ -23,7 +23,7 @@
 #include "mem.h"
 
 /* Error messages */
-static const char *const usage_message =
+/*static const char *const usage_message =
     "\n"
     "Conway's Game of Life\n"
     "Raphael Kubo da Costa, RA 072201\n"
@@ -31,7 +31,7 @@ static const char *const usage_message =
     "Usage: glife GENERATIONS INPUT_FILE\n"
     "\n"
     "  GENERATIONS is the number of generations the game should run\n"
-    "  INPUT_FILE  is a file containing an initial board state\n" "\n";
+    "  INPUT_FILE  is a file containing an initial board state\n" "\n";*/
 
 void game_config_free(GameConfig *config)
 {
@@ -55,18 +55,53 @@ GameConfig *game_config_new_from_cli(int argc, char *argv[])
   GameConfig *config;
   long generations;
 
+  int opt, nsecs, quit,pause;
+  pause = 0;
+  quit = 0;
+
+  while ((opt = getopt(argc, argv, "qp:")) != -1) {
+      switch (opt) {
+        case 'q':
+          quit = 1;
+          break;
+        case 'p':
+          nsecs = atoi(optarg);
+          pause = 1;
+          break;    
+      }
+}
+/*
   if (argc != CLI_ARGC) {
     fprintf(stderr, usage_message);
     return NULL;
   }
+*/
+if(pause == 1 && quit == 1){
+  generations = strtol(argv[4], &endptr, 10);
+    file = fopen(argv[5], "r");
+}
 
+else if(pause == 1){
+  generations = strtol(argv[3], &endptr, 10);
+    file = fopen(argv[4], "r");
+}
+
+else if(quit == 1){
+  generations = strtol(argv[2], &endptr, 10);
+    file = fopen(argv[3], "r");
+}
+
+else{
   generations = strtol(argv[1], &endptr, 10);
+  file = fopen(argv[2], "r");
+}
+
   if ((*endptr != '\0') || (generations < 0)) {
     fprintf(stderr, "Error: GENERATIONS must be a valid positive integer\n");
+    printf("%lu",generations);
     return NULL;
   }
 
-  file = fopen(argv[2], "r");
   if (!file) {
     fprintf(stderr, "Error: could not open '%s'\n", argv[2]);
     return NULL;
@@ -75,6 +110,9 @@ GameConfig *game_config_new_from_cli(int argc, char *argv[])
   config = MEM_ALLOC(GameConfig);
   config->generations = (size_t) generations;
   config->input_file = file;
+  config->quit = quit;
+  config->pause = pause;
+  config->nsecs = nsecs;
 
   return config;
 }

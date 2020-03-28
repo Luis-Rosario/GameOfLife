@@ -34,6 +34,9 @@
 typedef struct {
   size_t generations; /**< Number of generations for which to run the game. */
   FILE *input_file;   /**< The file with the seed board. */
+  int pause;
+  int quit;
+  int nsecs;
 } GameConfig;
 
 /**

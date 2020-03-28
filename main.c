@@ -19,6 +19,9 @@
 #include <stdlib.h>
 #include "config.h"
 #include "game.h"
+#include <time.h> 
+#include <unistd.h>
+
 
 int main(int argc, char *argv[])
 {
@@ -40,9 +43,16 @@ int main(int argc, char *argv[])
     exit(1);
   }
 
-  printf("Seed board:\n");
-  game_print_board(game);
+ int quit = config->quit;
+ int pause = config->pause;
+ int nsecs = config ->nsecs;
 
+  //if(quit == 0){
+    printf("Seed board:\n");
+    game_print_board(game);
+    printf("\033[2J");
+  //}
+  
   for (generation = 1; generation <= game_config_get_generations(config); generation++) {
     if (game_tick(game)) {
       fprintf(stderr, "Error while advancing to the next generation.\n");
@@ -50,10 +60,23 @@ int main(int argc, char *argv[])
       game_free(game);
     }
 
-    printf("\nGeneration %zu:\n", generation);
-    game_print_board(game);
+    if(quit == 0){
+      printf("\033[0;0H");
+      printf("\nGeneration %zu:\n", generation);
+      game_print_board(game);
+
+       if(pause == 1){
+         sleep(nsecs);
+       }
+    }
+
   }
 
+  if(quit == 1){
+    printf("\033[0;0H");
+    printf("\nGeneration %zu:\n", generation - 1);
+    game_print_board(game);
+  }
   game_config_free(config);
   game_free(game);
 

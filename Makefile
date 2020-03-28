@@ -25,6 +25,7 @@ EXE=glife
 SRC=config.c game.c main.c mem.c
 OBJ=$(patsubst %.c,%.o,$(SRC))
 
+#glife: config.o game.o main.o mem.o
 $(EXE): $(OBJ)
 	$(CC) -o $@ $^ $(LDFLAGS) $(LIBS)
 
@@ -34,3 +35,4 @@ $(EXE): $(OBJ)
 
 clean:
 	rm -f $(EXE) $(OBJ)
+

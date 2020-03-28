@@ -18,6 +18,7 @@
 #include <assert.h>
 #include <pcre.h>
 #include <string.h>
+#include <omp.h>
 #include "config.h"
 #include "game.h"
 #include "mem.h"
@@ -151,36 +152,65 @@ void process_slice(GameInfo *tinfo)
   char live_count;
   size_t row, col;
 
-  for (col = 0; col < tinfo->game->cols; col++) {
-    for (row = 0; row < tinfo->game->rows; row++) {
-      live_count = 0;
+  int N = 4; //numb threads
 
-      /* Count the living neighbour cells */
-      if (game_is_alive(tinfo->game, row, col+1))   live_count++;
-      if (game_is_alive(tinfo->game, row+1, col))   live_count++;
-      if (game_is_alive(tinfo->game, row+1, col+1)) live_count++;
-      if (row > 0) {
-        if (game_is_alive(tinfo->game, row-1, col))   live_count++;
-        if (game_is_alive(tinfo->game, row-1, col+1)) live_count++;
-      }
-      if (col > 0) {
-        if (game_is_alive(tinfo->game, row, col-1))   live_count++;
-        if (game_is_alive(tinfo->game, row+1, col-1)) live_count++;
-      }
-      if ((row > 0) && (col > 0))
-        if (game_is_alive(tinfo->game, row-1, col-1)) live_count++;
+  //int tot_c = tinfo->game->cols;
+  int tot_r = tinfo->game->rows;
+  //int odd_c = 0;
+  int odd_r = 0;
+  int numb = (tot_r / N);
 
-      /* Apply the game's rules to the current cell */
-      if ((live_count < 2) || (live_count > 3))
-        tinfo->new_board[row * tinfo->game->cols + col] = 0;
-      else if (live_count == 3)
-        tinfo->new_board[row * tinfo->game->cols + col] = 1;
-      else
-        tinfo->new_board[row * tinfo->game->cols + col] = tinfo->game->board[row * tinfo->game->cols + col];
+  if(numb%2 != 0){
+      odd_r =1;
+  }
+  
+  #pragma omp parallel num_threads(4)
+  {
+    int ID = omp_get_thread_num();
+    int start = ID + numb;
+    int end = start + numb;
+    
+    if(odd_r == 1 && ID == N-1){
+      end = tinfo->game->rows;
+    }
+
+    for (col = 0; col < tinfo->game->cols; col++) {
+      for (row = start ; row < end; row++) {
+        live_count = 0;
+
+        /* Count the living neighbour cells */
+        if (game_is_alive(tinfo->game, row, col+1))   live_count++;
+        if (game_is_alive(tinfo->game, row+1, col))   live_count++;
+        if (game_is_alive(tinfo->game, row+1, col+1)) live_count++;
+        if (row > 0) {
+          if (game_is_alive(tinfo->game, row-1, col))   live_count++;
+          if (game_is_alive(tinfo->game, row-1, col+1)) live_count++;
+        }
+        if (col > 0) {
+          if (game_is_alive(tinfo->game, row, col-1))   live_count++;
+          if (game_is_alive(tinfo->game, row+1, col-1)) live_count++;
+        }
+        if ((row > 0) && (col > 0))
+          if (game_is_alive(tinfo->game, row-1, col-1)) live_count++;
+
+        /* Apply the game's rules to the current cell */
+        if ((live_count < 2) || (live_count > 3))
+          tinfo->new_board[row * tinfo->game->cols + col] = 0;
+        else if (live_count == 3)
+          tinfo->new_board[row * tinfo->game->cols + col] = 1;
+        else
+          tinfo->new_board[row * tinfo->game->cols + col] = tinfo->game->board[row * tinfo->game->cols + col];
+      }
     }
   }
 }
 
+/*
+Qualquer célula viva com menos de dois vizinhos vivos morre de solidão.
+Qualquer célula viva com mais de três vizinhos vivos morre de superpopulação.
+Qualquer célula morta com exatamente três vizinhos vivos se torna uma célula viva.
+Qualquer célula viva com dois ou três vizinhos vivos continua no mesmo estado para a próxima geração.
+*/
 void game_free(Game *game)
 {
   if (game) {
