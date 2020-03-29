@@ -158,24 +158,25 @@ static int __parse_custom_format(Game *game, FILE *board)
  *
  * @param t Pointer to a GameInfo structure.
  */
-void process_slice(GameInfo *tinfo)
+void process_slice(GameInfo *tinfo, int threads)
 {
-
+  
+  omp_set_num_threads(threads);
 #pragma omp parallel
   {
     char live_count;
     size_t row, col;
 
     int N = omp_get_num_threads(); //numb threads
-
+    //printf("%d\n", N);
     int tot_rows = tinfo->game->rows;
-    
+
     int odd_r = 0;
     int numb = (tot_rows / N);
 
     if (numb % 2 != 0)
     {
-        odd_r = 1;
+      odd_r = 1;
     }
 
     int ID = omp_get_thread_num();
@@ -186,9 +187,6 @@ void process_slice(GameInfo *tinfo)
     {
       end = tinfo->game->rows;
     }
-
-    printf("%d\n", N);
-    printf("Thread: %d| start:%d | end:%d\n", ID, start, end);
 
     for (row = start; row < end; row++)
     {
@@ -328,7 +326,7 @@ void game_set_dead(Game *game, size_t row, size_t col)
   game->board[row * game->cols + col] = 0;
 }
 
-int game_tick(Game *game)
+int game_tick(Game *game, int threads)
 {
   char *new_board;
   int retval = 0;
@@ -340,7 +338,8 @@ int game_tick(Game *game)
   tinfo->game = game;
   tinfo->new_board = new_board;
 
-  process_slice(&tinfo[tnum]);
+  //printf("%d\n", threads);
+  process_slice(&tinfo[tnum], threads);
 
   /* Make game use the new board and drop the old one */
   free(game->board);

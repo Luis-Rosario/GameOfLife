@@ -55,11 +55,14 @@ GameConfig *game_config_new_from_cli(int argc, char *argv[])
   GameConfig *config;
   long generations;
 
-  int opt, nsecs, quit,pause;
+  int opt, nsecs, quit, pause, test, threads;
+  char *map;
   pause = 0;
   quit = 0;
+  test = 0;
+  threads = 1;
 
-  while ((opt = getopt(argc, argv, "qp:")) != -1) {
+  while ((opt = getopt(argc, argv, "qpt:")) != -1) {
       switch (opt) {
         case 'q':
           quit = 1;
@@ -67,7 +70,10 @@ GameConfig *game_config_new_from_cli(int argc, char *argv[])
         case 'p':
           nsecs = atoi(optarg);
           pause = 1;
-          break;    
+          break; 
+        case 't':
+          test = 1;
+          break;
       }
 }
 /*
@@ -79,21 +85,37 @@ GameConfig *game_config_new_from_cli(int argc, char *argv[])
 if(pause == 1 && quit == 1){
   generations = strtol(argv[4], &endptr, 10);
     file = fopen(argv[5], "r");
+    map = argv[5];
+  
 }
 
 else if(pause == 1){
   generations = strtol(argv[3], &endptr, 10);
     file = fopen(argv[4], "r");
+    map = argv[4];
+  
 }
 
 else if(quit == 1){
   generations = strtol(argv[2], &endptr, 10);
     file = fopen(argv[3], "r");
+    map = argv[3];
+  
+}
+
+else if(test == 1){
+  generations = strtol(argv[3], &endptr, 10);
+  threads = strtol(argv[2], &endptr, 10);
+  file = fopen(argv[4], "r");
+  map = argv[4];
+  
 }
 
 else{
   generations = strtol(argv[1], &endptr, 10);
   file = fopen(argv[2], "r");
+  map = argv[2];
+ 
 }
 
   if ((*endptr != '\0') || (generations < 0)) {
@@ -113,6 +135,9 @@ else{
   config->quit = quit;
   config->pause = pause;
   config->nsecs = nsecs;
+  config->test = test;
+  config->threads = threads;
+  config->map = map;
 
   return config;
 }

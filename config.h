@@ -37,6 +37,9 @@ typedef struct {
   int pause;
   int quit;
   int nsecs;
+  int test;
+  int threads;
+  char *map;
 } GameConfig;
 
 /**
